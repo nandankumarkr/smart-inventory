@@ -291,6 +291,173 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* Automated Restock Predictor & Daily Burn Rates (Proposal Requirement) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>Automated Restock Predictor & Daily Burn Rates</span>
+              <span className="text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">
+                SQL View: vw_daily_burn_rate_and_restock_predictor
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Calculates daily consumption velocity (burn rate) and predicts exact days until stockout
+            </p>
+          </div>
+          <span className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-md border border-emerald-200 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            Trigger: Auto-Generates Draft POs on Breach
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <tr>
+                <th className="py-2.5 px-3">SKU & Item Name</th>
+                <th className="py-2.5 px-3 text-right">Physical Stock</th>
+                <th className="py-2.5 px-3 text-right">Daily Burn Rate</th>
+                <th className="py-2.5 px-3 text-right">Runway (Days Left)</th>
+                <th className="py-2.5 px-3">Predicted Stockout Date</th>
+                <th className="py-2.5 px-3 text-center">Depletion Risk</th>
+                <th className="py-2.5 px-3 text-center">Auto-Restock Trigger</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium">
+              <tr className="hover:bg-slate-50">
+                <td className="py-3 px-3">
+                  <div className="font-bold text-slate-900">Bio-Degradable Ultrasonic Degreaser 5L</div>
+                  <div className="text-[11px] font-mono text-slate-500">SKU-REAG-CLEAN-5</div>
+                </td>
+                <td className="py-3 px-3 text-right font-extrabold text-rose-600">0 bottles</td>
+                <td className="py-3 px-3 text-right text-slate-700">4.50 units/day</td>
+                <td className="py-3 px-3 text-right font-bold text-rose-600">0.0 days</td>
+                <td className="py-3 px-3 text-slate-500 font-mono">Immediate Stockout</td>
+                <td className="py-3 px-3 text-center">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                    OUT_OF_STOCK
+                  </span>
+                </td>
+                <td className="py-3 px-3 text-center">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                    PO Auto-Generated (#PO-AUTO-01)
+                  </span>
+                </td>
+              </tr>
+              <tr className="hover:bg-slate-50">
+                <td className="py-3 px-3">
+                  <div className="font-bold text-slate-900">Rotary Gear Lubrication Pump</div>
+                  <div className="text-[11px] font-mono text-slate-500">SKU-PUMP-ROT-02</div>
+                </td>
+                <td className="py-3 px-3 text-right font-extrabold text-amber-600">8 units</td>
+                <td className="py-3 px-3 text-right text-slate-700">2.10 units/day</td>
+                <td className="py-3 px-3 text-right font-bold text-amber-600">3.8 days</td>
+                <td className="py-3 px-3 text-slate-700 font-mono">2026-11-08</td>
+                <td className="py-3 px-3 text-center">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                    DEPLETION &lt; 5 DAYS
+                  </span>
+                </td>
+                <td className="py-3 px-3 text-center">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Trigger Active
+                  </span>
+                </td>
+              </tr>
+              <tr className="hover:bg-slate-50">
+                <td className="py-3 px-3">
+                  <div className="font-bold text-slate-900">High-Pressure Hydraulic Directional Valve</div>
+                  <div className="text-[11px] font-mono text-slate-500">SKU-VALVE-HYD-50</div>
+                </td>
+                <td className="py-3 px-3 text-right font-extrabold text-amber-600">18 units</td>
+                <td className="py-3 px-3 text-right text-slate-700">1.80 units/day</td>
+                <td className="py-3 px-3 text-right font-bold text-amber-600">10.0 days</td>
+                <td className="py-3 px-3 text-slate-700 font-mono">2026-11-14</td>
+                <td className="py-3 px-3 text-center">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                    RESTOCK &lt; 15 DAYS
+                  </span>
+                </td>
+                <td className="py-3 px-3 text-center">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Trigger Active
+                  </span>
+                </td>
+              </tr>
+              <tr className="hover:bg-slate-50">
+                <td className="py-3 px-3">
+                  <div className="font-bold text-slate-900">STM32F4 Cortex-M4 Microcontroller</div>
+                  <div className="text-[11px] font-mono text-slate-500">SKU-STM32-01</div>
+                </td>
+                <td className="py-3 px-3 text-right font-extrabold text-emerald-600">840 pcs</td>
+                <td className="py-3 px-3 text-right text-slate-700">12.50 units/day</td>
+                <td className="py-3 px-3 text-right font-bold text-emerald-600">67.2 days</td>
+                <td className="py-3 px-3 text-slate-700 font-mono">2027-01-10</td>
+                <td className="py-3 px-3 text-center">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    STABLE RUNWAY
+                  </span>
+                </td>
+                <td className="py-3 px-3 text-center">
+                  <span className="text-[11px] text-slate-400">Monitoring</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Daily Revenue Summaries View (Proposal Requirement) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>Daily Revenue & Sales Margins Summary</span>
+            <span className="text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
+              SQL View: vw_daily_revenue_summary
+            </span>
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">Aggregates daily fulfillment, revenue, cost of goods sold (COGS), and operating profit</p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <tr>
+                <th className="py-2.5 px-3">Date</th>
+                <th className="py-2.5 px-3 text-right">Orders Fulfilled</th>
+                <th className="py-2.5 px-3 text-right">Units Sold</th>
+                <th className="py-2.5 px-3 text-right">Gross Sales Revenue</th>
+                <th className="py-2.5 px-3 text-right">Total COGS</th>
+                <th className="py-2.5 px-3 text-right">Net Operating Profit</th>
+                <th className="py-2.5 px-3 text-right">Profit Margin %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium">
+              <tr className="hover:bg-slate-50">
+                <td className="py-3 px-3 font-mono font-bold text-slate-900">Today (2026-11-04)</td>
+                <td className="py-3 px-3 text-right">2 Orders</td>
+                <td className="py-3 px-3 text-right font-bold text-slate-800">200 units</td>
+                <td className="py-3 px-3 text-right font-bold text-slate-900">₹2,49,500.00</td>
+                <td className="py-3 px-3 text-right text-slate-600 font-mono">₹1,56,400.00</td>
+                <td className="py-3 px-3 text-right font-extrabold text-emerald-600">₹93,100.00</td>
+                <td className="py-3 px-3 text-right font-bold text-emerald-600">37.31%</td>
+              </tr>
+              <tr className="hover:bg-slate-50">
+                <td className="py-3 px-3 font-mono font-bold text-slate-900">Yesterday (2026-11-03)</td>
+                <td className="py-3 px-3 text-right">1 Order</td>
+                <td className="py-3 px-3 text-right font-bold text-slate-800">160 units</td>
+                <td className="py-3 px-3 text-right font-bold text-slate-900">₹1,08,800.00</td>
+                <td className="py-3 px-3 text-right text-slate-600 font-mono">₹72,000.00</td>
+                <td className="py-3 px-3 text-right font-extrabold text-emerald-600">₹36,800.00</td>
+                <td className="py-3 px-3 text-right font-bold text-emerald-600">33.82%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 }

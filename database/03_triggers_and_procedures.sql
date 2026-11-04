@@ -326,3 +326,98 @@ CREATE TRIGGER trg_update_warehouse_occupancy
 AFTER INSERT OR UPDATE OF current_quantity OR DELETE ON inventory_batches
 FOR EACH ROW
 EXECUTE FUNCTION fn_recalculate_warehouse_occupancy();
+
+
+-- TRIGGER 4: Automated Purchase Order Generation On Safety Threshold Breach
+-- (Proposal Requirement: "Triggers that auto-generate purchase orders when inventory drops below threshold")
+CREATE OR REPLACE FUNCTION fn_auto_generate_purchase_order()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_prod_id UUID;
+    v_wh_id UUID;
+    v_total_stock INT;
+    v_reorder_level INT;
+    v_target_level INT;
+    v_cost_price NUMERIC(12, 2);
+    v_supplier_id UUID;
+    v_user_id UUID;
+    v_existing_open_po INT;
+    v_needed_qty INT;
+    v_new_po_id UUID;
+BEGIN
+    v_prod_id := NEW.product_id;
+    v_wh_id := NEW.warehouse_id;
+
+    -- 1. Check total remaining stock for this product across warehouse
+    SELECT COALESCE(SUM(current_quantity), 0) INTO v_total_stock
+    FROM inventory_batches
+    WHERE product_id = v_prod_id AND current_quantity > 0;
+
+    -- 2. Fetch thresholds from product catalog
+    SELECT reorder_level, target_stock_level, cost_price
+    INTO v_reorder_level, v_target_level, v_cost_price
+    FROM products
+    WHERE product_id = v_prod_id;
+
+    -- 3. If stock drops at or below reorder safety threshold
+    IF v_total_stock <= v_reorder_level THEN
+        -- Check if an active open PO already exists to prevent duplicate generation
+        SELECT COUNT(*) INTO v_existing_open_po
+        FROM purchase_orders po
+        JOIN purchase_order_items poi ON po.po_id = poi.po_id
+        WHERE poi.product_id = v_prod_id AND po.status IN ('DRAFT', 'ISSUED');
+
+        IF v_existing_open_po = 0 THEN
+            v_needed_qty := GREATEST(50, v_target_level - v_total_stock);
+
+            -- Select preferred supplier
+            SELECT supplier_id INTO v_supplier_id
+            FROM suppliers
+            WHERE is_preferred = TRUE AND is_blacklisted = FALSE
+            LIMIT 1;
+
+            IF v_supplier_id IS NULL THEN
+                SELECT supplier_id INTO v_supplier_id FROM suppliers LIMIT 1;
+            END IF;
+
+            -- System admin user ID for automated actions
+            SELECT user_id INTO v_user_id FROM users WHERE role = 'ADMIN' LIMIT 1;
+
+            -- Auto-create new purchase order
+            INSERT INTO purchase_orders (
+                po_number, supplier_id, destination_warehouse_id, status, 
+                total_amount, created_by, order_date, expected_delivery_date, notes
+            ) VALUES (
+                'AUTO-PO-' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '-' || SUBSTRING(v_prod_id::TEXT, 1, 4),
+                v_supplier_id,
+                v_wh_id,
+                'DRAFT',
+                (v_needed_qty * v_cost_price),
+                v_user_id,
+                CURRENT_DATE,
+                CURRENT_DATE + INTERVAL '7 days',
+                'AUTO-GENERATED: Stock dropped to ' || v_total_stock || ' units (Below safety threshold ' || v_reorder_level || ')'
+            ) RETURNING po_id INTO v_new_po_id;
+
+            -- Add purchase order line item
+            INSERT INTO purchase_order_items (
+                po_id, product_id, ordered_quantity, received_quantity, unit_cost
+            ) VALUES (
+                v_new_po_id,
+                v_prod_id,
+                v_needed_qty,
+                0,
+                v_cost_price
+            );
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_auto_generate_purchase_order
+AFTER UPDATE OF current_quantity OR DELETE ON inventory_batches
+FOR EACH ROW
+EXECUTE FUNCTION fn_auto_generate_purchase_order();
+

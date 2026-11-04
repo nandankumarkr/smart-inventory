@@ -1,10 +1,10 @@
 -- ============================================================================
--- SMART INVENTORY MANAGEMENT SYSTEM (SIMS)
+-- SMART INVENTORY & AUTOMATED RESTOCK PREDICTOR
 -- DBMS Experiential Learning - Level 3 Project
 -- Course: Database Management Systems (PES University)
 -- File: 01_schema_ddl.sql
 -- Description: Core Data Definition Language (DDL) Script
--- Demonstrates: CREATE, ALTER, DROP, PK, FK, Constraints, Data Types
+-- Demonstrates: CREATE, ALTER, DROP, PK, FK, Constraints, Data Types, Vector & NoSQL
 -- ============================================================================
 
 -- 1. Enable Required Extensions
@@ -12,6 +12,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector"; -- Vector database extension for embeddings
 
 -- 2. Clean Drop (Safe Re-execution demonstration)
+DROP TABLE IF EXISTS product_reviews CASCADE;
+DROP TABLE IF EXISTS sales_order_items CASCADE;
+DROP TABLE IF EXISTS sales_orders CASCADE;
 DROP TABLE IF EXISTS warehouse_telemetry CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS stock_transfer_items CASCADE;
@@ -254,7 +257,45 @@ CREATE TABLE warehouse_telemetry (
     device_id VARCHAR(80) NOT NULL
 );
 
--- 17. Demonstration of ALTER statement (adding operational constraint & audit column)
+-- 17. Sales Orders (Outbound demand tracking for daily revenue summaries and burn rates)
+CREATE TABLE sales_orders (
+    order_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_number VARCHAR(50) NOT NULL UNIQUE,
+    customer_name VARCHAR(150) NOT NULL,
+    order_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    total_amount NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
+    total_cost_basis NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(30) NOT NULL DEFAULT 'COMPLETED',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE sales_order_items (
+    order_item_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id UUID NOT NULL REFERENCES sales_orders(order_id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(product_id) ON DELETE RESTRICT,
+    quantity INT NOT NULL,
+    unit_price NUMERIC(12, 2) NOT NULL,
+    unit_cost NUMERIC(12, 2) NOT NULL,
+    line_total NUMERIC(14, 2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    CONSTRAINT chk_sales_qty CHECK (quantity > 0)
+);
+
+-- 18. Product Reviews & Unstructured Customer Feedback Embeddings
+-- Satisfies: "MongoDB or Pinecone/pgvector for storing product reviews and unstructured feedback embeddings"
+-- & "groups similar products based on customer review sentiment"
+CREATE TABLE product_reviews (
+    review_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
+    customer_name VARCHAR(120) NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    review_text TEXT NOT NULL,
+    sentiment_score NUMERIC(3, 2) NOT NULL CHECK (sentiment_score BETWEEN -1.00 AND 1.00), -- -1 (Negative) to +1 (Positive)
+    sentiment_label VARCHAR(20) NOT NULL CHECK (sentiment_label IN ('POSITIVE', 'NEUTRAL', 'NEGATIVE')),
+    review_embedding vector(384), -- Unstructured sentiment & feedback embeddings
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 19. Demonstration of ALTER statement (adding operational constraint & audit column)
 ALTER TABLE suppliers 
     ADD COLUMN is_blacklisted BOOLEAN NOT NULL DEFAULT FALSE;
 
@@ -266,3 +307,5 @@ COMMENT ON TABLE inventory_batches IS 'Physical FIFO batches tracking expiration
 COMMENT ON TABLE inventory_transactions IS 'Append-only double entry ledger of every stock movement';
 COMMENT ON TABLE product_embeddings IS 'Vector similarity store for semantic catalog search powered by pgvector';
 COMMENT ON TABLE warehouse_telemetry IS 'Semi-structured NoSQL JSONB store for IoT sensory and environmental metrics';
+COMMENT ON TABLE product_reviews IS 'Customer feedback store with unstructured sentiment embeddings and ratings';
+COMMENT ON TABLE sales_orders IS 'Outbound transaction ledger driving daily revenue and consumption burn rates';

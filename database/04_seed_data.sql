@@ -125,3 +125,24 @@ INSERT INTO warehouse_telemetry (warehouse_id, zone_code, sensor_payload, device
 ('b0000000-0000-0000-0000-000000000003', 'ZONE-COLD-B', '{"temp_c": 3.8, "humidity_pct": 58.2, "compressor_load_pct": 62, "door_opened_count": 12, "alerts": []}'::jsonb, 'IOT-SENS-DEL-02'),
 ('b0000000-0000-0000-0000-000000000001', 'ZONE-DRY-MAIN', '{"temp_c": 24.5, "humidity_pct": 48.0, "ambient_lux": 350, "air_quality_index": 45}'::jsonb, 'IOT-SENS-BLR-01'),
 ('b0000000-0000-0000-0000-000000000002', 'ZONE-HEAVY-RACK', '{"temp_c": 28.2, "humidity_pct": 68.5, "floor_vibration_g": 0.04, "alerts": ["high_humidity"]}'::jsonb, 'IOT-SENS-BOM-01');
+
+-- 12. Outbound Sales Orders (For Daily Revenue Summaries View)
+INSERT INTO sales_orders (order_id, order_number, customer_name, order_date, total_amount, total_cost_basis, status) VALUES
+('90000000-0000-0000-0000-000000000001', 'SO-2026-081', 'Apollo Multi-Specialty Hospital', CURRENT_DATE - INTERVAL '1 day', 108800.00, 72000.00, 'COMPLETED'),
+('90000000-0000-0000-0000-000000000002', 'SO-2026-082', 'Bosch Automotive India', CURRENT_DATE, 156000.00, 102000.00, 'COMPLETED'),
+('90000000-0000-0000-0000-000000000003', 'SO-2026-083', 'Manipal Health Enterprises', CURRENT_DATE, 93500.00, 54400.00, 'COMPLETED');
+
+INSERT INTO sales_order_items (order_id, product_id, quantity, unit_price, unit_cost) VALUES
+('90000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000001', 160, 680.00, 450.00),
+('90000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-000000000005', 30, 5200.00, 3400.00),
+('90000000-0000-0000-0000-000000000003', 'e0000000-0000-0000-0000-000000000004', 170, 550.00, 320.00);
+
+-- 13. Customer Reviews with Sentiment Analysis & Feedback Embeddings
+-- (Proposal Requirement: "product reviews and unstructured feedback embeddings")
+INSERT INTO product_reviews (product_id, customer_name, rating, review_text, sentiment_score, sentiment_label, review_embedding) VALUES
+('e0000000-0000-0000-0000-000000000003', 'Dr. Alok Verma', 5, 'Exceptional cold chain integrity. Temperature vials remained strictly below -15C throughout delivery.', 0.94, 'POSITIVE', array_fill(0.045::real, ARRAY[384])::vector),
+('e0000000-0000-0000-0000-000000000003', 'Karan Mehta (Lab Logistics)', 4, 'Packaging was robust and FIFO batch expiry verification was effortless on arrival.', 0.78, 'POSITIVE', array_fill(0.046::real, ARRAY[384])::vector),
+('e0000000-0000-0000-0000-000000000004', 'Nurse Sneha Pillai', 5, 'Highly stable insulin formulation. Rapid delivery from Delhi hub avoided any degradation.', 0.89, 'POSITIVE', array_fill(0.045::real, ARRAY[384])::vector),
+('e0000000-0000-0000-0000-000000000005', 'Rohan Sengupta (Industrial Eng)', 4, 'Directional valve held up to 340 bar continuous duty without hydraulic leakages.', 0.72, 'POSITIVE', array_fill(0.052::real, ARRAY[384])::vector),
+('e0000000-0000-0000-0000-000000000008', 'Suresh Kumar (Maintenance)', 2, 'Solvent is effective but smell is pungent and container lid had minor leakage during transit.', -0.45, 'NEGATIVE', array_fill(0.041::real, ARRAY[384])::vector);
+

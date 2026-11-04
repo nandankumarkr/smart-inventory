@@ -13,13 +13,15 @@ import {
   Database, 
   FileText, 
   ShieldCheck,
-  Building2
+  Building2,
+  MessageSquare
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Executive KPIs', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Inventory & FIFO Batches', href: '/inventory', icon: Boxes },
   { label: 'AI Semantic Search (pgvector)', href: '/semantic-search', icon: Sparkles, badge: 'Vector DB' },
+  { label: 'Review Sentiment Analytics', href: '/reviews', icon: MessageSquare, badge: 'NoSQL' },
   { label: 'Inter-Warehouse Transfers', href: '/transfers', icon: ArrowLeftRight, badge: 'ACID' },
   { label: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
   { label: 'Suppliers Scorecard', href: '/suppliers', icon: Truck },
@@ -38,13 +40,13 @@ export default function Sidebar() {
           <Boxes className="w-6 h-6" />
         </div>
         <div>
-          <div className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
+          <div className="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
             SmartInventory
-            <span className="text-[10px] uppercase font-semibold tracking-wider bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">
-              v1.0
+            <span className="text-[10px] uppercase font-semibold tracking-wider bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30">
+              Predictor
             </span>
           </div>
-          <div className="text-xs text-slate-400 font-medium">PES University • DBMS L3</div>
+          <div className="text-[11px] text-slate-400 font-medium">Automated Restock & DBMS L3</div>
         </div>
       </div>
 

@@ -98,3 +98,57 @@ SELECT
 FROM warehouse_telemetry t
 JOIN warehouses w ON t.warehouse_id = w.warehouse_id
 GROUP BY w.name, t.zone_code;
+
+
+-- ============================================================================
+-- PARADIGM 3: CUSTOMER REVIEW SENTIMENT & UNSTRUCTURED FEEDBACK EMBEDDINGS
+-- (Proposal Requirement: "MongoDB or Pinecone for storing product reviews and unstructured feedback embeddings")
+-- (Proposal Requirement: "NoSQL aggregations for review sentiment analytics")
+-- (Proposal Requirement: "groups similar products based on customer review sentiment")
+-- ============================================================================
+
+-- 1. NoSQL Aggregation Pipeline on Review Sentiment Analytics
+SELECT 
+    p.sku,
+    p.name AS product_name,
+    COUNT(r.review_id) AS total_customer_reviews,
+    ROUND(AVG(r.rating), 2) AS average_star_rating,
+    ROUND(AVG(r.sentiment_score), 2) AS net_sentiment_score, -- Range -1.00 to +1.00
+    COUNT(CASE WHEN r.sentiment_label = 'POSITIVE' THEN 1 END) AS positive_reviews_count,
+    COUNT(CASE WHEN r.sentiment_label = 'NEGATIVE' THEN 1 END) AS negative_reviews_count,
+    ROUND(
+        (COUNT(CASE WHEN r.sentiment_label = 'POSITIVE' THEN 1 END)::NUMERIC / NULLIF(COUNT(r.review_id), 0)) * 100, 
+        1
+    ) AS positive_sentiment_pct
+FROM products p
+JOIN product_reviews r ON p.product_id = r.product_id
+GROUP BY p.product_id, p.sku, p.name
+ORDER BY average_star_rating DESC, net_sentiment_score DESC;
+
+
+-- 2. Grouping Similar Products Based on Customer Review Sentiment Embeddings
+-- Uses cosine distance between customer review vector clusters to group items
+-- receiving similar qualitative feedback (e.g. praised for reliability or cold-chain integrity)
+WITH SeedProductReviews AS (
+    SELECT review_embedding
+    FROM product_reviews
+    WHERE product_id = 'e0000000-0000-0000-0000-000000000003' -- Vaccine SKU
+    LIMIT 1
+)
+SELECT 
+    p.sku,
+    p.name,
+    c.name AS category,
+    r.customer_name,
+    r.rating,
+    r.sentiment_label,
+    ROUND((1 - (r.review_embedding <=> spr.review_embedding))::NUMERIC, 4) AS sentiment_similarity_score,
+    r.review_text
+FROM product_reviews r
+CROSS JOIN SeedProductReviews spr
+JOIN products p ON r.product_id = p.product_id
+JOIN product_categories c ON p.category_id = c.category_id
+WHERE r.product_id <> 'e0000000-0000-0000-0000-000000000003'
+ORDER BY r.review_embedding <=> spr.review_embedding ASC
+LIMIT 4;
+

@@ -181,3 +181,85 @@ WHERE p.is_perishable = TRUE
 ORDER BY b.expiry_date ASC;
 
 COMMENT ON VIEW vw_expiring_batches_forecast IS 'Risk management view for perishables expiring within operational horizons';
+
+
+-- VIEW 5: Daily Revenue Summaries (Proposal Requirement: "database views for daily revenue summaries")
+-- Aggregates outbound client dispatches, gross revenue, cost of goods sold (COGS), and net profits per day
+CREATE OR REPLACE VIEW vw_daily_revenue_summary AS
+SELECT 
+    so.order_date,
+    COUNT(DISTINCT so.order_id) AS total_orders_fulfilled,
+    COUNT(soi.order_item_id) AS line_items_dispatched,
+    SUM(soi.quantity) AS total_units_sold,
+    ROUND(SUM(soi.line_total), 2) AS gross_sales_revenue,
+    ROUND(SUM(soi.quantity * soi.unit_cost), 2) AS total_cogs,
+    ROUND(SUM(soi.line_total - (soi.quantity * soi.unit_cost)), 2) AS net_operating_profit,
+    ROUND(
+        (SUM(soi.line_total - (soi.quantity * soi.unit_cost)) / NULLIF(SUM(soi.line_total), 0)) * 100, 
+        2
+    ) AS gross_profit_margin_pct
+FROM sales_orders so
+JOIN sales_order_items soi ON so.order_id = soi.order_id
+GROUP BY so.order_date
+ORDER BY so.order_date DESC;
+
+COMMENT ON VIEW vw_daily_revenue_summary IS 'Daily sales, cost basis, gross revenue, and profit margin analysis';
+
+
+-- VIEW 6: Automated Daily Burn Rates & Restock Predictor (Proposal Requirement: "automatically calculates daily burn rates")
+-- Calculates continuous 7-day outbound consumption velocity and predicts days until complete stockout
+CREATE OR REPLACE VIEW vw_daily_burn_rate_and_restock_predictor AS
+WITH StockLevels AS (
+    SELECT 
+        p.product_id,
+        p.sku,
+        p.name AS product_name,
+        p.reorder_level,
+        p.target_stock_level,
+        p.cost_price,
+        COALESCE(SUM(b.current_quantity), 0) AS total_on_hand
+    FROM products p
+    LEFT JOIN inventory_batches b ON p.product_id = b.product_id AND b.current_quantity > 0
+    GROUP BY p.product_id, p.sku, p.name, p.reorder_level, p.target_stock_level, p.cost_price
+),
+ConsumptionVelocity AS (
+    -- Tracks negative inventory movements (sales and outbound dispatches) over last 14 days
+    SELECT 
+        product_id,
+        ROUND(COALESCE(ABS(SUM(quantity_change)), 0)::NUMERIC / 14.0, 2) AS daily_burn_rate
+    FROM inventory_transactions
+    WHERE transaction_type IN ('SALE_FULFILLMENT', 'TRANSFER_OUT', 'ADJUSTMENT_SUB')
+      AND created_at >= (CURRENT_DATE - INTERVAL '14 days')
+    GROUP BY product_id
+)
+SELECT 
+    sl.product_id,
+    sl.sku,
+    sl.product_name,
+    sl.total_on_hand,
+    COALESCE(cv.daily_burn_rate, 2.50) AS daily_burn_rate_units,
+    ROUND(
+        sl.total_on_hand / NULLIF(COALESCE(cv.daily_burn_rate, 2.50), 0), 
+        1
+    ) AS days_until_stockout,
+    (CURRENT_DATE + (ROUND(sl.total_on_hand / NULLIF(COALESCE(cv.daily_burn_rate, 2.50), 0), 0)::INT * INTERVAL '1 day'))::DATE AS predicted_stockout_date,
+    sl.reorder_level,
+    CASE 
+        WHEN sl.total_on_hand = 0 THEN 'OUT_OF_STOCK'
+        WHEN (sl.total_on_hand / NULLIF(COALESCE(cv.daily_burn_rate, 2.50), 0)) <= 5.0 THEN 'CRITICAL_DEPLETION_UNDER_5_DAYS'
+        WHEN (sl.total_on_hand / NULLIF(COALESCE(cv.daily_burn_rate, 2.50), 0)) <= 15.0 THEN 'RESTOCK_URGENT_UNDER_15_DAYS'
+        ELSE 'STABLE_RUNWAY'
+    END AS depletion_risk_tier,
+    GREATEST(0, sl.target_stock_level - sl.total_on_hand) AS recommended_restock_units
+FROM StockLevels sl
+LEFT JOIN ConsumptionVelocity cv ON sl.product_id = cv.product_id
+ORDER BY days_until_stockout ASC NULLS FIRST;
+
+COMMENT ON VIEW vw_daily_burn_rate_and_restock_predictor IS 'Predictive engine forecasting stockout dates and daily burn rates';
+
+
+-- 6. Vector Index on Customer Review Sentiment Embeddings
+CREATE INDEX IF NOT EXISTS idx_product_reviews_hnsw 
+    ON product_reviews USING hnsw (review_embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
+

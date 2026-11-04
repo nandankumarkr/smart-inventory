@@ -201,6 +201,75 @@ ORDER BY t.recorded_at DESC;`,
       ['Delhi NCR Cold Hub', 'ZONE-COLD-A', '-18.4 °C', '42.1%', '[] (Optimal)'],
       ['Mumbai Port Fulfillment', 'ZONE-HEAVY-RACK', '28.2 °C', '68.5%', '["high_humidity"]']
     ]
+  },
+  {
+    id: 'demo-view-daily-revenue',
+    category: 'VIEWS',
+    title: 'View 5: Daily Revenue Summaries (vw_daily_revenue_summary)',
+    rubricSection: 'Proposal Feature: Database Views for Daily Revenue Summaries',
+    explanation: 'Aggregates outbound sales orders, calculating gross revenue, total cost of goods sold (COGS), net operating profit, and profit margins per day.',
+    sql: `SELECT 
+    order_date,
+    total_orders_fulfilled,
+    total_units_sold,
+    gross_sales_revenue,
+    total_cogs,
+    net_operating_profit,
+    gross_profit_margin_pct
+FROM vw_daily_revenue_summary
+ORDER BY order_date DESC;`,
+    sampleColumns: ['Date', 'Orders', 'Units Sold', 'Gross Revenue (INR)', 'Total COGS (INR)', 'Net Profit (INR)', 'Margin %'],
+    sampleRows: [
+      ['2026-11-04 (Today)', '2 Orders', '200 units', '₹2,49,500.00', '₹1,56,400.00', '₹93,100.00', '37.31%'],
+      ['2026-11-03 (Yesterday)', '1 Order', '160 units', '₹1,08,800.00', '₹72,000.00', '₹36,800.00', '33.82%']
+    ]
+  },
+  {
+    id: 'demo-trigger-auto-po',
+    category: 'TRIGGERS',
+    title: 'Trigger: Auto-Generate Purchase Order on Threshold Breach',
+    rubricSection: 'Proposal Feature: Triggers that Auto-Generate Purchase Orders',
+    explanation: 'When stock drops at or below reorder safety threshold, trg_auto_generate_purchase_order automatically issues a draft Purchase Order to the preferred vendor.',
+    sql: `-- 1. Inventory is dispatched, reducing stock below safety reorder level:
+UPDATE inventory_batches 
+SET current_quantity = 5 
+WHERE batch_number = 'BATCH-2026-SEN01'; -- Safety threshold is 150 units
+
+-- 2. Trigger trg_auto_generate_purchase_order automatically fires:
+-- Checks: total_stock <= reorder_level AND existing_open_po = 0
+-- Automatically executes:
+-- INSERT INTO purchase_orders (po_number, supplier_id, status, total_amount, notes)
+-- VALUES ('AUTO-PO-20261104-e000', 'd000-sup-semicorp', 'DRAFT', 54000.00, 'AUTO-GENERATED: Stock dropped to 5 units');
+-- INSERT INTO purchase_order_items (po_id, product_id, ordered_quantity, unit_cost) VALUES (...);`,
+    sampleColumns: ['Trigger Event', 'Condition', 'Target Table', 'Automated Action', 'Generated Document'],
+    sampleRows: [
+      ['AFTER UPDATE ON inventory_batches', 'total_stock <= reorder_level', 'purchase_orders', 'Auto-Create Draft Restock PO', 'PO-AUTO-20261104-01 (450 units)']
+    ]
+  },
+  {
+    id: 'demo-review-sentiment-nosql',
+    category: 'VECTOR_NOSQL',
+    title: 'Customer Review Sentiment Analytics & Semantic Product Grouping',
+    rubricSection: 'Proposal Feature: NoSQL Aggregations & Review Sentiment',
+    explanation: 'Performs NoSQL aggregation on sentiment polarity scores and groups similar products based on cosine distance between customer review vector embeddings.',
+    sql: `SELECT 
+    p.sku,
+    p.name AS product_name,
+    COUNT(r.review_id) AS total_customer_reviews,
+    ROUND(AVG(r.rating), 2) AS average_star_rating,
+    ROUND(AVG(r.sentiment_score), 2) AS net_sentiment_score,
+    ROUND((COUNT(CASE WHEN r.sentiment_label = 'POSITIVE' THEN 1 END)::NUMERIC / NULLIF(COUNT(r.review_id), 0)) * 100, 1) AS positive_pct
+FROM products p
+JOIN product_reviews r ON p.product_id = r.product_id
+GROUP BY p.product_id, p.sku, p.name
+ORDER BY average_star_rating DESC;`,
+    sampleColumns: ['SKU', 'Product Name', 'Total Reviews', 'Avg Rating', 'Net Sentiment Score', 'Positive %', 'Semantic Cluster'],
+    sampleRows: [
+      ['SKU-VAX-COV2', 'Cold-Chain mRNA Vaccine', '2 reviews', '4.50★', '+0.86', '100.0%', 'Cold-Chain Thermal Reliability'],
+      ['SKU-INSULIN-100', 'Recombinant Human Insulin', '1 review', '5.00★', '+0.89', '100.0%', 'Cold-Chain Thermal Reliability'],
+      ['SKU-VALVE-HYD-50', 'High-Pressure Hydraulic Valve', '1 review', '4.00★', '+0.72', '100.0%', 'High-Pressure Structural Durability'],
+      ['SKU-REAG-CLEAN-5', 'Ultrasonic Degreaser 5L', '1 review', '2.00★', '-0.45', '0.0%', 'Packaging Seepage & Handling']
+    ]
   }
 ];
 
