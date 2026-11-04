@@ -25,8 +25,6 @@ const NAV_ITEMS = [
   { label: 'Inter-Warehouse Transfers', href: '/transfers', icon: ArrowLeftRight, badge: 'ACID' },
   { label: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart },
   { label: 'Suppliers Scorecard', href: '/suppliers', icon: Truck },
-  { label: 'DBMS Viva Evaluator', href: '/dbms-evaluator', icon: Database, badge: 'Level 3', highlight: true },
-  { label: 'ER Diagram & Relational Schema', href: '/er-diagram', icon: FileText },
 ];
 
 export default function Sidebar() {
@@ -46,7 +44,7 @@ export default function Sidebar() {
               Predictor
             </span>
           </div>
-          <div className="text-[11px] text-slate-400 font-medium">Automated Restock & DBMS L3</div>
+          <div className="text-[11px] text-slate-400 font-medium">Automated Restock & Multi-Facility</div>
         </div>
       </div>
 
@@ -55,7 +53,7 @@ export default function Sidebar() {
         <div className="px-3 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
           Operations & Inventory
         </div>
-        {NAV_ITEMS.slice(0, 6).map((item) => {
+        {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
           return (
@@ -76,37 +74,6 @@ export default function Sidebar() {
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
                   isActive ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-800 text-emerald-400 border border-emerald-500/30'
                 }`}>
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-
-        <div className="pt-4 px-3 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-          DBMS Evaluation & Schema
-        </div>
-        {NAV_ITEMS.slice(6).map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                item.highlight && !isActive
-                  ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/50'
-                  : isActive
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.highlight ? 'text-emerald-400' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
-              </div>
-              {item.badge && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-500 text-slate-950 font-bold">
                   {item.badge}
                 </span>
               )}

@@ -39,18 +39,18 @@ export default function HomePage() {
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              href="/dbms-evaluator"
+              href="/semantic-search"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700 transition-all"
             >
-              <Database className="w-4 h-4 text-emerald-400" />
-              <span>Launch DBMS Viva Evaluator</span>
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <span>AI Semantic Search (pgvector)</span>
             </Link>
             <Link
-              href="/er-diagram"
+              href="/reviews"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
             >
-              <FileText className="w-4 h-4 text-slate-400" />
-              <span>ER Schema View</span>
+              <Boxes className="w-4 h-4 text-emerald-400" />
+              <span>Review Sentiment Analytics</span>
             </Link>
           </div>
         </div>
